@@ -1,68 +1,72 @@
+# train.py
+
 import os
-import json
 import argparse
 import torch
 from datasets import load_dataset
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-from peft import LoraConfig
-from trl import SFTTrainer, get_peft_config, get_quantization_config
-from trl import SFTConfig
+from peft import LoraConfig, PeftModel
+from trl import SFTTrainer, SFTConfig
 from dotenv import load_dotenv
+import utils
 
 load_dotenv("./.env")
 
-def load_limo_subset(subset_size):
-    dataset = load_dataset("GAIR/LIMO", split="train")
-    if subset_size < len(dataset):
-        dataset = dataset.shuffle(seed=42).select(range(subset_size))
-    return dataset
+def load_limo_subset():
+    ds = load_dataset("GAIR/LIMO", split="train")
+    # ds = ds.shuffle(seed=42).select(range(subset_size))
+    return ds
 
 def main():
-    parser = argparse.ArgumentParser(description="Fine-tune LLaMA 3.1 on LIMO dataset.")
-    parser.add_argument("--subset_size", type=int, required=True, help="Number of training examples to use.")
+    parser = argparse.ArgumentParser("Fine‑tune + merge LoRA")
+    parser.add_argument("--name", type=str, required=True)
     args = parser.parse_args()
 
-    model_id = "meta-llama/Meta-Llama-3.1-8B-Instruct"
-    hf_token = os.getenv("HF_KEY")
-    output_dir = f"models/{args.subset_size}"
+    model_id   = utils.BASE_MODEL
+    hf_token   = os.getenv("HF_KEY")
+    output_dir   = f"models/{args.name}"
 
-    tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True, token=hf_token)
+    # ─── 1) TOKENIZER ────────────────────────────────────────────────────────
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_id, trust_remote_code=True, token=hf_token
+    )
     tokenizer.pad_token = tokenizer.eos_token
 
-    # Load and prepare dataset
-    limo_dataset = load_limo_subset(args.subset_size)
+    # ─── 2) DATASET ─────────────────────────────────────────────────────────
+    train_ds = load_limo_subset()
 
-    # Load model
-    quantization_config = BitsAndBytesConfig(
+    # ─── 3) BASE MODEL (QLORA) ──────────────────────────────────────────────
+    quant_cfg = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16
+        bnb_4bit_compute_dtype=torch.float16,
     )
-
-    model = AutoModelForCausalLM.from_pretrained(
+    base_model = AutoModelForCausalLM.from_pretrained(
         model_id,
         trust_remote_code=True,
         token=hf_token,
-        quantization_config=quantization_config
+        quantization_config=quant_cfg,
     )
 
-    # Configure LoRA
+    # ─── 4) LoRA CONFIG ─────────────────────────────────────────────────────
     peft_config = LoraConfig(
         r=8,
         lora_alpha=16,
         lora_dropout=0.1,
         bias="none",
-        task_type="CAUSAL_LM"   # VERY important for LLaMA causal language modeling
+        task_type="CAUSAL_LM",
     )
 
+    # ─── 5) FORMAT FUNCTION ─────────────────────────────────────────────────
     def formatting_func(example):
-        return [f"""<s>[INST] Solve the following problem with chain of thought reasoning:
-                Question: {example['question']}
-                Answer: [/INST] {example['solution']} </s>"""]
+        return [
+            "<s>[INST] Solve the following problem with chain of thought reasoning:\n"
+            f"Question: {example['question']}\n"
+            "Answer: [/INST] "
+            f"{example['solution']} </s>"
+        ]
 
-
-
-    # Configure training
+    # ─── 6) TRAINING ARGS ────────────────────────────────────────────────────
     training_args = SFTConfig(
         output_dir=output_dir,
         per_device_train_batch_size=2,
@@ -74,20 +78,20 @@ def main():
         report_to=[]
     )
 
-    # Initialize trainer
+    # ─── 7) INITIALIZE & RUN TRAINER ─────────────────────────────────────────
     trainer = SFTTrainer(
-        model=model,
-        train_dataset=limo_dataset,
+        model=base_model,
+        train_dataset=train_ds,
         tokenizer=tokenizer,
         args=training_args,
         peft_config=peft_config,
-        formatting_func=formatting_func,  
+        formatting_func=formatting_func,
     )
-
-    # Fine-tune model
+    trainer.model.print_trainable_parameters()
     trainer.train()
-    trainer.model.save_pretrained(output_dir)
-    tokenizer.save_pretrained(output_dir)
+
+    trainer.save_model(output_dir)
+
 
 if __name__ == "__main__":
     main()

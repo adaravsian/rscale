@@ -1,2 +1,5 @@
-python train.py --subset_size 100
-python eval.py --model_dir ./models/100 --output_file ./results/100.json
+NAME="full"
+
+python train.py --name $NAME
+python inference.py --name $NAME
+python eval.py --name $NAME

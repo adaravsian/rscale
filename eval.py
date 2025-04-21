@@ -1,96 +1,70 @@
+# eval.py
+
 import argparse
 import json
 import os
-import torch
+import re
 from datasets import load_dataset
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-from peft import PeftModel
+import utils  # must define EVAL_DATASETS and extract_gold_answer
 
-EVAL_DATASETS = {
-    "AIME24": "math-ai/aime24",
-    "MATH500": "HuggingFaceH4/MATH-500",
-    "AMC23": "math-ai/amc23",
-    "OlympiadBench": "math-ai/olympiadbench",
-    "GPQA": "math-ai/gpqa",
-    "Minerva": "math-ai/minerva",
-}
-
-@torch.no_grad()
-def evaluate_model(model, tokenizer):
-    model.eval()
-    results = {}
-
-    for name, dataset_name in EVAL_DATASETS.items():
-        print(f"Evaluating on {name}...")
-        dataset = load_dataset(dataset_name, split="test")
-
-        correct = 0
-        total = 0
-        for example in dataset:
-            if "question" in example:
-                question = example["question"]
-                answer = str(example["answer"]).strip()
-            elif "problem" in example:
-                question = example["problem"]
-                answer = str(example["solution"]).strip()
-            else:
-                continue  # Skip examples without question/problem
-
-            prompt = f"Solve the following problem with chain of thought reasoning:\nQuestion: {question}\nAnswer:"
-            inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True).to(model.device)
-            outputs = model.generate(**inputs, max_new_tokens=512)
-            decoded = tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-            if answer in decoded:
-                correct += 1
-            total += 1
-
-        accuracy = correct / total if total > 0 else 0
-        results[name] = accuracy
-    return results
+def extract_final_answer(text: str) -> str:
+    """Pulls out the text inside \\boxed{} or after 'Answer:'."""
+    m = re.search(r"\\boxed\{([^}]*)\}", text)
+    if m:
+        return m.group(1).strip()
+    m = re.search(r"Answer:\s*(.+)", text)
+    if m:
+        return m.group(1).strip()
+    return text.strip()
 
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate a fine-tuned LLaMA model.")
-    parser.add_argument("--model_dir", type=str, required=True, help="Path to the fine-tuned model directory.")
-    parser.add_argument("--output_file", type=str, default=None, help="Path to save evaluation results.")
-    args = parser.parse_args()
-
-    model_id = "meta-llama/Meta-Llama-3.1-8B-Instruct"
-    hf_token = os.getenv("HF_KEY")
-
-    print("Loading tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True, token=hf_token)
-    tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.padding_side = "right"
-
-    print("Loading model...")
-    quantization_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16
+    p = argparse.ArgumentParser(description="Evaluate saved generations")
+    p.add_argument(
+        "--name",
+        type=str,
+        required=True,
+        help="experiment name (subfolder under `generations/`)",
     )
-    base_model = AutoModelForCausalLM.from_pretrained(
-        model_id,
-        trust_remote_code=True,
-        token=hf_token,
-        quantization_config=quantization_config,
-        device_map="auto"
-    )
+    args = p.parse_args()
 
-    model = PeftModel.from_pretrained(base_model, args.model_dir)
+    gen_dir = os.path.join("generations", args.name)
+    if not os.path.isdir(gen_dir):
+        raise FileNotFoundError(f"No generations folder at {gen_dir}")
 
-    print("Evaluating model...")
-    eval_results = evaluate_model(model, tokenizer)
+    results = {}
 
-    print("\n=== Evaluation Results ===")
-    for dataset_name, acc in eval_results.items():
-        print(f"{dataset_name}: {acc:.4f}")
+    for ds_name, cfg in utils.EVAL_DATASETS.items():
+        gen_path = os.path.join(gen_dir, f"{ds_name}.json")
+        if not os.path.isfile(gen_path):
+            print(f"⚠️  Missing generations for {ds_name}: {gen_path}")
+            continue
 
-    if args.output_file:
-        os.makedirs(os.path.dirname(args.output_file), exist_ok=True)
-        with open(args.output_file, "w") as f:
-            json.dump(eval_results, f, indent=4)
-        print(f"Saved results to {args.output_file}")
+        # Load predictions
+        with open(gen_path, "r") as f:
+            preds = json.load(f)
+
+        # Load gold test split
+        ds = load_dataset(cfg["path"], split="test")
+        n = min(len(preds), len(ds))
+        ds = ds.select(range(n))
+
+        correct = 0
+        for pred_text, example in zip(preds, ds):
+            pred = extract_final_answer(pred_text)
+            gold = utils.extract_gold_answer(example, cfg)
+            if pred == gold:
+                correct += 1
+
+        acc = correct / n if n else 0.0
+        results[ds_name] = {"correct": correct, "total": n, "accuracy": acc}
+        print(f"{ds_name:15}  {correct}/{n} = {acc:.4f}")
+
+    # Save JSON report
+    os.makedirs("results", exist_ok=True)
+    out_path = os.path.join("results", f"{args.name}.json")
+    with open(out_path, "w") as f:
+        json.dump(results, f, indent=2)
+    print(f"\nSaved evaluation results to {out_path}")
 
 if __name__ == "__main__":
     main()
