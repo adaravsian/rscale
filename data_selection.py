@@ -1,6 +1,4 @@
 import pandas as pd
-import numpy as np
-import datasets
 from datasets import load_dataset
 
 """
@@ -8,7 +6,7 @@ Class to select datapoints from a dataset object
 
 dataset is assumed to be a huggingface/arrows dataset object
 
-default LIMO dataset bibtex citation
+LIMO dataset bibtex citation
 @misc{ye2025limoreasoning,
       title={LIMO: Less is More for Reasoning}, 
       author={Yixin Ye and Zhen Huang and Yang Xiao and Ethan Chern and Shijie Xia and Pengfei Liu},
@@ -32,7 +30,7 @@ class DatasetSelector:
             self.dataset = load_dataset("GAIR/LIMO", split="train")
         
         # split train test
-        
+
         # if type(self.dataset) is datasets.DatasetDict:
         #     try:
         #         _ = self.dataset['test']
