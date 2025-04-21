@@ -3,7 +3,7 @@
 import os
 import argparse
 import torch
-from datasets import load_dataset
+from data_selection import DatasetSelector
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from peft import LoraConfig, PeftModel
 from trl import SFTTrainer, SFTConfig
@@ -12,9 +12,11 @@ import utils
 
 load_dotenv("./.env")
 
-def load_limo_subset():
-    ds = load_dataset("GAIR/LIMO", split="train")
-    # ds = ds.shuffle(seed=42).select(range(subset_size))
+def load_limo_subset(proportion=1.0, method='rand'):
+    ds_sel = DatasetSelector() 
+    # proportion is what proportion of the dataset to select
+    # proportion=1.0 means select the whole thing
+    ds = ds_sel.select(method=method, proportion=proportion)
     return ds
 
 def main():
@@ -33,7 +35,9 @@ def main():
     tokenizer.pad_token = tokenizer.eos_token
 
     # ─── 2) DATASET ─────────────────────────────────────────────────────────
-    train_ds = load_limo_subset()
+    proportion = 1.0 # can tune as a hyperparameter or for our experiments
+    method = 'rand' # rand or best. best not implemented yet, need results from model
+    train_ds = load_limo_subset(proportion=proportion, method=method)
 
     # ─── 3) BASE MODEL (QLORA) ──────────────────────────────────────────────
     quant_cfg = BitsAndBytesConfig(
