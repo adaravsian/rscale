@@ -22,6 +22,8 @@ def load_limo_subset(proportion=1.0, method='rand'):
 def main():
     parser = argparse.ArgumentParser("Fine‑tune + merge LoRA")
     parser.add_argument("--name", type=str, required=True)
+    parser.add_argument("--proportion", type=float, default=1.0, help="Proportion of the dataset to use (0.0 to 1.0)")
+    parser.add_argument("--method", type=str, default="rand", help="Method for dataset selection (e.g., 'rand')")
     args = parser.parse_args()
 
     model_id   = utils.BASE_MODEL
@@ -35,9 +37,7 @@ def main():
     tokenizer.pad_token = tokenizer.eos_token
 
     # ─── 2) DATASET ─────────────────────────────────────────────────────────
-    proportion = 1.0 # can tune as a hyperparameter or for our experiments
-    method = 'rand' # rand, uncertainty, len
-    train_ds = load_limo_subset(proportion=proportion, method=method)
+    train_ds = load_limo_subset(proportion=args.proportion, method=args.method)
 
     # ─── 3) BASE MODEL (QLORA) ──────────────────────────────────────────────
     quant_cfg = BitsAndBytesConfig(
