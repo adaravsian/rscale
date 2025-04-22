@@ -36,7 +36,7 @@ def main():
 
     # ─── 2) DATASET ─────────────────────────────────────────────────────────
     proportion = 1.0 # can tune as a hyperparameter or for our experiments
-    method = 'rand' # rand or best. best not implemented yet, need results from model
+    method = 'rand' # rand, uncertainty, len
     train_ds = load_limo_subset(proportion=proportion, method=method)
 
     # ─── 3) BASE MODEL (QLORA) ──────────────────────────────────────────────

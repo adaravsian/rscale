@@ -54,7 +54,7 @@ class DatasetSelector:
         if method == 'rand':
             return self.__select_random(proportion=proportion)
         
-        elif method == 'best':
+        elif method == 'uncertainty':
             # TODO
             # maybe try uncertainty sampling?
             # would need a finished model and its predictions to do this
@@ -70,6 +70,9 @@ class DatasetSelector:
             # uncertainties = 1 - probabilities.max(axis=1) # might be a different axis depending on shape of probabilities
             # then pick the k samples that correspond with the highest k entropies
             return None
+        elif method == 'len':
+            return self.__select_len(proportion=proportion)
+            
         else:
             print('*' * 40, '\ninvalid method of selection, defaulting to random\n' + '*' * 40)
             return self.__select_random(proportion=proportion)
@@ -86,14 +89,20 @@ class DatasetSelector:
         selected = dataset.select(range(int(dataset.num_rows * proportion)))
         self.selected_dataset = selected
         return selected
-    
 
-    
+    """
+    @param the proportion of the dataset to select from. if proportion=1.0, the whole dataset is selected
+    the selected portion is saved in self.selected_dataset and returned by this method
+    """
+    def __select_len(self, proportion=1.0):
+        indices = None
+        with open('indices.txt', 'r') as f:
+            indices = [int(num) for num in f.read().split(',')]
 
-
-        
-
-    
-
-
-
+        portion = int(len(indices) * proportion)
+        indices = indices[:portion]
+        print(indices[0:10])
+        dataset = self.dataset
+        selected = dataset.select(indices=indices)
+        self.selected_dataset = selected
+        return selected
