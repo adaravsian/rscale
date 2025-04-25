@@ -96,7 +96,7 @@ class DatasetSelector:
     """
     def __select_len(self, proportion=1.0):
         indices = None
-        with open('indices.txt', 'r') as f:
+        with open('indices/len_indices.txt', 'r') as f:
             indices = [int(num) for num in f.read().split(',')]
 
         portion = int(len(indices) * proportion)
