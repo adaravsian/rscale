@@ -105,7 +105,7 @@ class DatasetSelector:
 
         portion = int(len(indices) * proportion)
         indices = indices[:portion]
-        print(indices[0:10])
+        # print(indices[0:10])
         dataset = self.dataset
         selected = dataset.select(indices=indices)
         self.selected_dataset = selected
@@ -122,8 +122,12 @@ class DatasetSelector:
             self.selected_dataset = ds
             return ds
         
-        portion = int(817 * proportion)
-        clusters = gen_clustering_indices.gen_indices(portion)
+        # portion = int(817 * proportion)
+        # clusters = gen_clustering_indices.gen_indices(portion)
+        
+        filename = 'indices/cluster_indices_' + str(proportion) + '.txt'
+        with open(filename, 'r') as f:
+            clusters = [int(num) for num in f.read().split(',')]
         
         for ind, n in clusters:
             if n not in indices_dict:
