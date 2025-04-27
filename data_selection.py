@@ -127,9 +127,9 @@ class DatasetSelector:
         
         filename = 'indices/cluster_indices_' + str(proportion) + '.txt'
         with open(filename, 'r') as f:
-            clusters = [int(num) for num in f.read().split(',')]
+            clusters = [int(num.strip()) for num in f.read().split(',') if num.strip()]
         
-        for ind, n in clusters:
+        for ind, n in enumerate(clusters):
             if n not in indices_dict:
                 indices_dict[n] = ind
         
