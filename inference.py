@@ -15,21 +15,13 @@ def extract_question(datum, config):
     return datum.get(config["question_key"], "").strip()
 
 
-def generate_and_save(llm, exp_name, batch_size, max_new_tokens):
-    """Generate answers in batches and save them as JSON files.
-
-    Args:
-        llm: vLLM LLM instance.
-        exp_name: Name of the fine‑tuning/adapter experiment (used for LoRA path).
-        batch_size: Number of prompts to send to vLLM at once.
-        max_new_tokens: Decoding budget per completion.
-    """
+def generate_and_save(llm, exp_name, max_new_tokens):
     save_dir = os.path.join("generations", exp_name)
     adapter_path = os.path.join("models", exp_name)
     os.makedirs(save_dir, exist_ok=True)
 
     for ds_name, config in utils.EVAL_DATASETS.items():
-        print(f"\nGenerating for {ds_name}… (batch={batch_size})")
+        print(f"\nGenerating for {ds_name}")
 
         ds = load_dataset(config["path"], split="test")
         prompts = [
@@ -47,19 +39,12 @@ def generate_and_save(llm, exp_name, batch_size, max_new_tokens):
             stop=["<STOP>"],
         )
 
-        all_outputs = []
-        # ------------------------------------------------------------------
-        # Batched generation loop – keeps KV‑cache size bounded
-        # ------------------------------------------------------------------
-        for i in tqdm(range(0, len(prompts), batch_size)):
-            prompt_chunk = prompts[i : i + batch_size]
-            chunk_outputs = llm.generate(
-                prompt_chunk,
-                sampling_params,
-                use_tqdm=False,  # outer tqdm already shows progress
-                lora_request=LoRARequest(exp_name, 1, adapter_path),
-            )
-            all_outputs.extend(chunk_outputs)
+        all_outputs = llm.generate(
+            prompts, 
+            sampling_params, 
+            use_tqdm=True, 
+            lora_request=LoRARequest(exp_name, 1, adapter_path)
+        )
 
         gens = [out.outputs[0].text.strip() for out in all_outputs]
 
@@ -72,9 +57,8 @@ def generate_and_save(llm, exp_name, batch_size, max_new_tokens):
 def main():
     parser = argparse.ArgumentParser("vLLM inference with batching")
     parser.add_argument("--name", type=str, required=True, help="experiment/adapter name")
-    parser.add_argument("--batch_size", type=int, default=64, help="prompts per batch")
     parser.add_argument("--gpu_util", type=float, default=0.8, help="fraction of GPU RAM to use")
-    parser.add_argument("--max_new_tokens", type=int, default=2048, help="generation length budget")
+    parser.add_argument("--max_new_tokens", type=int, default=5012, help="generation length budget")
     args = parser.parse_args()
 
     # Initialise vLLM engine
@@ -88,7 +72,6 @@ def main():
     generate_and_save(
         llm,
         exp_name=args.name,
-        batch_size=args.batch_size,
         max_new_tokens=args.max_new_tokens,
     )
 

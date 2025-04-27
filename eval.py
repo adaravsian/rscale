@@ -6,6 +6,10 @@ import os
 import re
 from datasets import load_dataset
 import utils  # must define EVAL_DATASETS and extract_gold_answer
+import pdb
+import re
+from sympy import sympify, simplify, SympifyError
+from tqdm import tqdm
 
 def extract_final_answer(text: str) -> str:
     """Pulls out the text inside \\boxed{} or after 'Answer:'."""
@@ -15,7 +19,35 @@ def extract_final_answer(text: str) -> str:
     m = re.search(r"Answer:\s*(.+)", text)
     if m:
         return m.group(1).strip()
-    return text.strip()
+    return None
+
+
+def normalize_answer(ans: str) -> str:
+    """
+    1) Turn \frac{a}{b} → (a)/(b)
+    2) Turn \pi → pi
+    3) Strip leftover LaTeX
+    4) Insert * for implicit multiplication everywhere
+    5) Remove spaces
+    """
+    ans = ans.strip()
+
+    # 1) Fractions
+    ans = re.sub(r'\\frac\{([^}]*)\}\{([^}]*)\}', r'(\1)/(\2)', ans)
+    # 2) Pi
+    ans = ans.replace('\\pi', 'pi')
+    # 3) Other LaTeX cruft
+    ans = ans.replace('\\left', '').replace('\\right', '')
+    ans = re.sub(r'\\[a-zA-Z]+', '', ans)
+    ans = ans.replace('{', '').replace('}', '')
+    # 4) Implicit multiplication: 
+    ans = re.sub(r'(?<=[0-9A-Za-z])\(', r'*(', ans)  # x(
+    ans = re.sub(r'\)\(', r')*(', ans)               # )(
+    ans = re.sub(r'\)(?=[0-9A-Za-z])', r')*', ans)   # )x
+    # 5) Whitespace
+    ans = ans.replace(' ', '')
+
+    return ans
 
 def main():
     p = argparse.ArgumentParser(description="Evaluate saved generations")
@@ -49,10 +81,13 @@ def main():
         ds = ds.select(range(n))
 
         correct = 0
-        for pred_text, example in zip(preds, ds):
+        for pred_text, example in tqdm(zip(preds, ds), total=n, desc=f"Evaluating {ds_name}"):
             pred = extract_final_answer(pred_text)
+            if pred is None:
+                continue
             gold = utils.extract_gold_answer(example, cfg)
-            if pred == gold:
+            # if expressions_equal(pred, gold):
+            if pred == gold or normalize_answer(pred) == normalize_answer(gold):
                 correct += 1
 
         acc = correct / n if n else 0.0
