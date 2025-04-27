@@ -1,0 +1,22 @@
+{
+  "MATH500": {
+    "correct": 196,
+    "total": 500,
+    "accuracy": 0.392
+  },
+  "AMC23": {
+    "correct": 8,
+    "total": 40,
+    "accuracy": 0.2
+  },
+  "OlympiadBench": {
+    "correct": 84,
+    "total": 675,
+    "accuracy": 0.12444444444444444
+  },
+  "Minerva": {
+    "correct": 24,
+    "total": 272,
+    "accuracy": 0.08823529411764706
+  }
+}

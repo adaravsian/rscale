@@ -58,7 +58,7 @@ def main():
     parser = argparse.ArgumentParser("vLLM inference with batching")
     parser.add_argument("--name", type=str, required=True, help="experiment/adapter name")
     parser.add_argument("--gpu_util", type=float, default=0.8, help="fraction of GPU RAM to use")
-    parser.add_argument("--max_new_tokens", type=int, default=2048, help="generation length budget")
+    parser.add_argument("--max_new_tokens", type=int, default=5012, help="generation length budget")
     args = parser.parse_args()
 
     # Initialise vLLM engine
