@@ -24,7 +24,7 @@ def load_acc_results(results_folder, selection_method, benchmarks):
 
 
 # Create a grouped bar chart showing the benchmark accuracies for each trial
-def plot_results(acc_results, plot_title, benchmarks):
+def plot_results(acc_results, plot_title, benchmarks, selection_method):
     trial_names = acc_results.keys()
     num_trials = len(trial_names)
     num_benchmarks = len(benchmarks)
@@ -51,18 +51,23 @@ def plot_results(acc_results, plot_title, benchmarks):
     axes.set_ylim(0, 1)
     axes.legend(title="Benchmark") # shows which benchmark each bar represents
     plt.tight_layout() # makes the plot fill the window
+    
+    save_path = os.path.join("result_graphs", selection_method)
+    plt.savefig(save_path)
     plt.show()
 
 def main():
     results_folder = "results"
     benchmarks = ["MATH500", "AMC23", "OlympiadBench", "Minerva"]
-    selection_methods = ["rand"]
-    plot_titles = {"rand": "Benchmark Performance with Random Training Data Selection"}
+    selection_methods = ["rand", "len", "cluster"]
+    plot_titles = {"rand": "Benchmark Performance with Random Training Data Selection",
+                   "len": "Benchmark Performance with Training Data Selection by Length",
+                   "cluster": "Benchmark Performance with Training Data Selection by Clustering"}
 
     for selection_method in selection_methods:
         acc_results = load_acc_results(results_folder, selection_method, benchmarks)
         plot_title = plot_titles[selection_method]
-        plot_results(acc_results, plot_title, benchmarks)
+        plot_results(acc_results, plot_title, benchmarks, selection_method)
 
 if __name__ == "__main__":
     main()
