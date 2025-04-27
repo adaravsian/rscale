@@ -24,24 +24,19 @@ def load_acc_results(results_folder, selection_method, benchmarks):
 
 
 # Create a grouped bar chart showing the benchmark accuracies for each trial
-def plot_results(acc_results, plot_title, benchmarks, selection_method):
+def plot_results(acc_results, plot_title, benchmarks, benchmark_plot_styles, selection_method):
     trial_names = acc_results.keys()
     num_trials = len(trial_names)
     num_benchmarks = len(benchmarks)
 
     x = np.arange(num_trials)
-    group_width = 0.9 # controls the spacing between each group of bars
-    bar_width = group_width / num_benchmarks # makes every bar the same width
 
     fig, axes = plt.subplots(figsize = (10,6))
 
-    # create bars for each benchmark
     for i in range(num_benchmarks):
-        offset = (i - (num_benchmarks - 1) / 2) * bar_width # this offsets the bars within the bar group
-        # get the accuracies for the current benchmark across all trials
-        benchmark_accuracies = [acc_results[trial_name][i] for trial_name in trial_names]
-        # add a bar for the current benchmark to all trial groups
-        axes.bar(x + offset, benchmark_accuracies, bar_width, label=benchmarks[i])
+        benchmark = benchmarks[i]
+        marker, linestyle, color = benchmark_plot_styles[benchmark]
+        axes.plot(x, [acc_results[trial_name][i] for trial_name in trial_names], marker=marker, label=benchmark, linestyle=linestyle, color=color)
 
     axes.set_ylabel("Accuracy")
     axes.set_xlabel("Trials")
@@ -59,6 +54,11 @@ def plot_results(acc_results, plot_title, benchmarks, selection_method):
 def main():
     results_folder = "results"
     benchmarks = ["MATH500", "AMC23", "OlympiadBench", "Minerva"]
+    # for each benchmark specify marker, linestyle, and color
+    benchmark_plot_styles = {"MATH500": ["s", "-", "blue"], 
+                             "AMC23": ["o", "-", "orange"],
+                             "OlympiadBench": ["^", "--", "green"],
+                             "Minerva": ["D", "--", "red"]} 
     selection_methods = ["rand", "len", "cluster"]
     plot_titles = {"rand": "Benchmark Performance with Random Training Data Selection",
                    "len": "Benchmark Performance with Training Data Selection by Length",
@@ -67,7 +67,7 @@ def main():
     for selection_method in selection_methods:
         acc_results = load_acc_results(results_folder, selection_method, benchmarks)
         plot_title = plot_titles[selection_method]
-        plot_results(acc_results, plot_title, benchmarks, selection_method)
+        plot_results(acc_results, plot_title, benchmarks, benchmark_plot_styles, selection_method)
 
 if __name__ == "__main__":
     main()
