@@ -15,11 +15,11 @@ def extract_gold_answer(example, cfg):
 
 
 EVAL_DATASETS = {
-    "AIME24": {"path": "math-ai/aime24", "answer_key": "solution", "question_key": "problem"},
+    # "AIME24": {"path": "math-ai/aime24", "answer_key": "solution", "question_key": "problem"},
     "MATH500": {"path": "HuggingFaceH4/MATH-500", "answer_key": "answer", "question_key": "problem"},
     "AMC23": {"path": "math-ai/amc23", "answer_key": "answer", "question_key": "question"},
     "OlympiadBench": {"path": "math-ai/olympiadbench", "answer_key": "answer", "question_key": "question"},
-    "GPQA": {"path": "math-ai/gpqa", "answer_key": "solution", "question_key": "problem"},
+    # "GPQA": {"path": "math-ai/gpqa", "answer_key": "solution", "question_key": "problem"},
     "Minerva": {"path": "math-ai/minervamath", "answer_key": "answer", "question_key": "question"},
 }
 

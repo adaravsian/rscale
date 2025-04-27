@@ -2,6 +2,6 @@
 .env
 __pycache__
 models
-results
-generations
+# results
+# generations
 limo.jsonl
