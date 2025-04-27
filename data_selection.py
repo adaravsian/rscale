@@ -1,5 +1,6 @@
 import pandas as pd
 from datasets import load_dataset
+import gen_clustering_indices
 
 """
 Class to select datapoints from a dataset object
@@ -72,6 +73,9 @@ class DatasetSelector:
             return None
         elif method == 'len':
             return self.__select_len(proportion=proportion)
+        
+        elif method == 'cluster':
+            return self.__select_cluster(proportion=proportion)
             
         else:
             print('*' * 40, '\ninvalid method of selection, defaulting to random\n' + '*' * 40)
@@ -102,6 +106,31 @@ class DatasetSelector:
         portion = int(len(indices) * proportion)
         indices = indices[:portion]
         print(indices[0:10])
+        dataset = self.dataset
+        selected = dataset.select(indices=indices)
+        self.selected_dataset = selected
+        return selected
+    
+    """
+    @param the proportion of the dataset to select from. if proportion=1.0, the whole dataset is selected
+    the selected portion is saved in self.selected_dataset and returned by this method
+    """
+    def __select_cluster(self, proportion=1.0):
+        indices_dict = {}
+        if proportion == 1.0:
+            ds = self.dataset
+            self.selected_dataset = ds
+            return ds
+        
+        portion = int(817 * proportion)
+        clusters = gen_clustering_indices.gen_indices(portion)
+        
+        for ind, n in clusters:
+            if n not in indices_dict:
+                indices_dict[n] = ind
+        
+        indices = indices_dict.values()
+
         dataset = self.dataset
         selected = dataset.select(indices=indices)
         self.selected_dataset = selected
