@@ -1,8 +1,15 @@
-PROPORTION=.05
+PROPORTION=1.0
 METHOD="rand"
 NAME="${METHOD}_${PROPORTION}"
 
-rm -rf models/"$NAME"
-accelerate --multi_gpu --num_processes 6 launch train.py --proportion $PROPORTION --method $METHOD --name $NAME
+# rm -rf models/"$NAME"
+accelerate launch \
+  --multi_gpu \
+  --num_processes 8 \
+  train.py \
+    --proportion $PROPORTION \
+    --method $RAND \
+    --name $NAME
+
 python inference.py --name $NAME
 python eval.py --name $NAME

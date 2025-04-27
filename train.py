@@ -32,6 +32,7 @@ def main():
     model_id   = utils.BASE_MODEL
     hf_token   = os.getenv("HF_KEY")
     output_dir = f"models/{args.name}"
+    print(f"Saving model to {output_dir}")
 
     tokenizer = AutoTokenizer.from_pretrained(
         model_id, trust_remote_code=True, token=hf_token
