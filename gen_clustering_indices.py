@@ -84,10 +84,21 @@ def gen_indices(num_clusters, proportion=None):
     return clusters
     
 if __name__ == '__main__':
-    gen_indices(None, 0.05)
-    gen_indices(None, 0.2)
-    gen_indices(None, 0.4)
-    gen_indices(None, 0.6)
-    gen_indices(None, 0.8)
+    p = argparse.ArgumentParser(description="Generate indices from k means clustering")
+    p.add_argument(
+        "--proportion",
+        type=float,
+        default=0.6,
+        help="the proportion of the dataset to select",
+    )
+    args = p.parse_args()
+
+    gen_indices(None, args.proportion)
+
+    # gen_indices(None, 0.05)
+    # gen_indices(None, 0.2)
+    # gen_indices(None, 0.4)
+    # gen_indices(None, 0.6)
+    # gen_indices(None, 0.8)
     
     
