@@ -2,10 +2,11 @@ import json
 import os
 import matplotlib.pyplot as plt
 import numpy as np
+import math
 
 # Load the benchmark performance results for all trials that used
 # the given training data selection method
-def load_acc_results(results_folder, selection_method, benchmarks):
+def load_acc_results(results_folder, selection_method, benchmarks, total_train_samples):
     acc_results = {}
 
     for filename in os.listdir(results_folder):
@@ -18,14 +19,16 @@ def load_acc_results(results_folder, selection_method, benchmarks):
                 for benchmark in benchmarks:
                     acc = benchmark_results[benchmark]["accuracy"]
                     accuracies.append(acc)
-                acc_results[filename] = accuracies # store all benchmark accuracies for the current trial
+                train_sample_proportion = float(filename.strip(".json").split("_")[1])
+                num_train_samples = math.floor(train_sample_proportion * total_train_samples)
+                acc_results[num_train_samples] = accuracies # store all benchmark accuracies for the current trial
 
     return acc_results
 
 
 # Create a grouped bar chart showing the benchmark accuracies for each trial
 def plot_results(acc_results, plot_title, benchmarks, benchmark_plot_styles, selection_method):
-    trial_names = acc_results.keys()
+    trial_names = acc_results.keys() # trials are named according to the number of training samples used
     num_trials = len(trial_names)
     num_benchmarks = len(benchmarks)
 
@@ -39,7 +42,7 @@ def plot_results(acc_results, plot_title, benchmarks, benchmark_plot_styles, sel
         axes.plot(x, [acc_results[trial_name][i] for trial_name in trial_names], marker=marker, label=benchmark, linestyle=linestyle, color=color)
 
     axes.set_ylabel("Accuracy")
-    axes.set_xlabel("Trials")
+    axes.set_xlabel("Training Samples")
     axes.set_title(plot_title)
     axes.set_xticks(x)
     axes.set_xticklabels(trial_names) # show trial file names for each bar group
@@ -52,6 +55,7 @@ def plot_results(acc_results, plot_title, benchmarks, benchmark_plot_styles, sel
     plt.show()
 
 def main():
+    total_train_samples = 817 # number of training examples in LIMO dataset
     results_folder = "results"
     benchmarks = ["MATH500", "AMC23", "OlympiadBench", "Minerva"]
     # for each benchmark specify marker, linestyle, and color
@@ -65,7 +69,7 @@ def main():
                    "cluster": "Benchmark Performance with Training Data Selection by Clustering"}
 
     for selection_method in selection_methods:
-        acc_results = load_acc_results(results_folder, selection_method, benchmarks)
+        acc_results = load_acc_results(results_folder, selection_method, benchmarks, total_train_samples)
         plot_title = plot_titles[selection_method]
         plot_results(acc_results, plot_title, benchmarks, benchmark_plot_styles, selection_method)
 
