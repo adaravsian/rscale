@@ -1,6 +1,7 @@
 import json
 import os
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import numpy as np
 import math
 
@@ -41,13 +42,30 @@ def plot_results(acc_results, plot_title, benchmarks, benchmark_plot_styles, sel
         marker, linestyle, color = benchmark_plot_styles[benchmark]
         axes.plot(x, [acc_results[trial_name][i] for trial_name in trial_names], marker=marker, label=benchmark, linestyle=linestyle, color=color)
 
+    for i in range(num_benchmarks):
+        total = 0
+        benchmark = benchmarks[i]
+        for trial_name in trial_names:
+            total += acc_results[trial_name][i]
+        avg_acc = total / len(trial_names)
+        print(selection_method, " benchmark: ", benchmark, " avg acc: ", avg_acc)
+
+    # Add legend entries for solid vs dashed line meaning
+    custom_lines = [ 
+        Line2D([0], [0], color='black', linestyle='-'), 
+        Line2D([0], [0], color='black', linestyle='--')
+    ]
+    handles, labels = axes.get_legend_handles_labels()
+    handles += custom_lines
+    labels += ["In-domain", "Out-of-domain"]
+
     axes.set_ylabel("Accuracy")
     axes.set_xlabel("Training Samples")
     axes.set_title(plot_title)
     axes.set_xticks(x)
     axes.set_xticklabels(trial_names) # show trial file names for each bar group
     axes.set_ylim(0, 1)
-    axes.legend(title="Benchmark") # shows which benchmark each bar represents
+    axes.legend(handles=handles, labels=labels, title="Benchmarks")
     plt.tight_layout() # makes the plot fill the window
     
     save_path = os.path.join("result_graphs", selection_method)
